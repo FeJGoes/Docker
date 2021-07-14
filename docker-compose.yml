@@ -1,0 +1,47 @@
+version: '3.9'
+services: 
+  # Relational Database
+  mariadb: 
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes: 
+      - /mariadb/:/var/lib/mysql
+
+  # Cache Database 
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - /redis:/data
+  
+  # PHP version and config
+  php:
+    image: php:8.0-apache
+    volumes:
+      - /.:/var/www/app
+      - /php/php.ini:/usr/local/etc/php/php.ini
+    depends_on:
+      - redis
+      - mariadb
+
+  # Package Manager PHP
+  composer:
+    image: composer:latest
+    command: ["composer", "install"]
+    volumes:
+      - /composer:/app
+
+  # Web Server 
+  nginx:
+    image: nginx:alpine
+    ports:
+      - 80:80
+    volumes:
+      - .:/var/www/app
+      - /nginx/site.conf:/etc/nginx/conf.d/site.conf
+    depends_on:
+      - php
